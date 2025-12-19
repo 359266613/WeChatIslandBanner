@@ -1,0 +1,11 @@
+Package: com.axs.wechatislandbanner
+Name: WeChat Island Banner
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Show in-app banner notifications in WeChat near Dynamic Island.
+Section: 微信插件
+Maintainer: Axs <qiaozhani000@163.com>
+Author: Axs <qiaozhani000@163.com>
+Depends: firmware (>= 14.0), mobilesubstrate
+Icon: https://axs66.github.io/pro/icon/wechat.png
+SileoDepiction: https://axs66.github.io/pro/sileodepiction/wechatislandbanner/js.json
