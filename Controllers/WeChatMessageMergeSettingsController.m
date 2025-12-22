@@ -9,7 +9,7 @@ typedef NS_ENUM(NSInteger, WMMSection) {
     WMMSectionCount
 };
 
-@interface WeChatMessageMergeSettingsController () <UIPickerViewDelegate, UIPickerViewDataSource>
+@interface WeChatMessageMergeSettingsController ()
 @property (nonatomic, strong) UISwitch *enableSwitch;
 @property (nonatomic, strong) UISwitch *hideLeftSwitch;
 @property (nonatomic, strong) UISwitch *hideRightSwitch;
