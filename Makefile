@@ -14,7 +14,8 @@ TWEAK_NAME = WeChatIslandBanner
 WeChatIslandBanner_FILES = \
 	Tweak.xm \
 	$(wildcard Sources/*.m) \
-	$(wildcard Controllers/*.m)
+	$(wildcard Controllers/*.m) \
+	$(wildcard Hooks/*.xm)
 
 WeChatIslandBanner_HEADER_DIRS = \
 	$(THEOS_PROJECT_DIR)/Headers \

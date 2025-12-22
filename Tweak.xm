@@ -138,6 +138,8 @@
 // 仅追加设置入口与插件注册，不改动原消息处理逻辑
 static NSString *const kWIBPluginDisplayName = @"灵动消息";
 static NSString *const kWIBPluginVersion     = @"5.2.0";
+static NSString *const kWMMPluginDisplayName = @"消息合并";
+static NSString *const kWMMPluginVersion     = @"1.0.0";
 
 static BOOL WIBPluginManagerAvailable(void) {
     Class mgr = objc_getClass("WCPluginsMgr");
@@ -159,11 +161,18 @@ static void WIBRegisterSettingsIfPossible(void) {
         id instance = ((id (*)(id, SEL))objc_msgSend)(mgr, sharedSel);
         SEL regSel = sel_registerName("registerControllerWithTitle:version:controller:");
         if (instance && [instance respondsToSelector:regSel]) {
+            // 注册灵动消息
             ((void (*)(id, SEL, NSString *, NSString *, NSString *))objc_msgSend)(instance,
                                                                                   regSel,
                                                                                   kWIBPluginDisplayName,
                                                                                   kWIBPluginVersion,
                                                                                   @"WeChatIslandBannerSettingsController");
+            // 注册消息合并
+            ((void (*)(id, SEL, NSString *, NSString *, NSString *))objc_msgSend)(instance,
+                                                                                  regSel,
+                                                                                  kWMMPluginDisplayName,
+                                                                                  kWMMPluginVersion,
+                                                                                  @"WeChatMessageMergeSettingsController");
             registered = YES;
         }
     } @catch (__unused NSException *exception) {
@@ -201,6 +210,33 @@ static void WIBPresentSettingsFromController(id hostController) {
     }
 }
 
+static void WMMPresentSettingsFromController(id hostController) {
+    if (!hostController) return;
+    id controller = [[NSClassFromString(@"WeChatMessageMergeSettingsController") alloc] init];
+    if (!controller) return;
+
+    SEL navSel = sel_registerName("navigationController");
+    if ([hostController respondsToSelector:navSel]) {
+        id nav = ((id (*)(id, SEL))objc_msgSend)(hostController, navSel);
+        if (nav) {
+            SEL pushSel = sel_registerName("pushViewController:animated:");
+            if ([nav respondsToSelector:pushSel]) {
+                ((void (*)(id, SEL, id, BOOL))objc_msgSend)(nav, pushSel, controller, YES);
+                return;
+            }
+        }
+    }
+
+    Class navCls = objc_getClass("UINavigationController");
+    if (navCls) {
+        id nav = [[navCls alloc] initWithRootViewController:controller];
+        SEL presentSel = sel_registerName("presentViewController:animated:completion:");
+        if ([hostController respondsToSelector:presentSel]) {
+            ((void (*)(id, SEL, id, BOOL, id))objc_msgSend)(hostController, presentSel, nav, YES, nil);
+        }
+    }
+}
+
 static id WIBSettingsTableManager(id controller) {
     if (!controller) return nil;
     const char *managerIvarNames[] = {"m_tableViewMgr", "_tableViewMgr", "m_tableMgr", "_tableMgr"};
@@ -214,6 +250,7 @@ static id WIBSettingsTableManager(id controller) {
 }
 
 static void *kWIBSettingsEntryAssociatedKey = &kWIBSettingsEntryAssociatedKey;
+static void *kWMMSettingsEntryAssociatedKey = &kWMMSettingsEntryAssociatedKey;
 
 static void WIBEnsureSettingsEntry(id controller) {
     if (!controller || WIBPluginManagerAvailable()) return;
@@ -230,6 +267,8 @@ static void WIBEnsureSettingsEntry(id controller) {
 
     Class cellMgrCls = objc_getClass("WCTableViewNormalCellManager");
     if (!cellMgrCls) return;
+    
+    // 添加灵动消息入口
     SEL normalSel = sel_registerName("normalCellForSel:target:title:rightValue:accessoryType:");
     id cell = nil;
     if ([cellMgrCls respondsToSelector:normalSel]) {
@@ -241,17 +280,37 @@ static void WIBEnsureSettingsEntry(id controller) {
                                                                                        kWIBPluginVersion,
                                                                                        1);
     }
-    if (!cell) return;
-
-    SEL addCellSel = sel_registerName("addCell:");
-    if ([section respondsToSelector:addCellSel]) {
-        ((void (*)(id, SEL, id))objc_msgSend)(section, addCellSel, cell);
+    if (cell) {
+        SEL addCellSel = sel_registerName("addCell:");
+        if ([section respondsToSelector:addCellSel]) {
+            ((void (*)(id, SEL, id))objc_msgSend)(section, addCellSel, cell);
+        }
+        objc_setAssociatedObject(controller, kWIBSettingsEntryAssociatedKey, cell, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    
+    // 添加消息合并入口
+    id wmmCell = nil;
+    if ([cellMgrCls respondsToSelector:normalSel]) {
+        wmmCell = ((id (*)(id, SEL, SEL, id, NSString *, NSString *, long))objc_msgSend)(cellMgrCls,
+                                                                                          normalSel,
+                                                                                          sel_registerName("wmm_onSettingsEntryTapped"),
+                                                                                          controller,
+                                                                                          kWMMPluginDisplayName,
+                                                                                          kWMMPluginVersion,
+                                                                                          1);
+    }
+    if (wmmCell) {
+        SEL addCellSel = sel_registerName("addCell:");
+        if ([section respondsToSelector:addCellSel]) {
+            ((void (*)(id, SEL, id))objc_msgSend)(section, addCellSel, wmmCell);
+        }
+        objc_setAssociatedObject(controller, kWMMSettingsEntryAssociatedKey, wmmCell, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    
     SEL reloadSel = sel_registerName("reloadTableView");
     if ([manager respondsToSelector:reloadSel]) {
         ((void (*)(id, SEL))objc_msgSend)(manager, reloadSel);
     }
-    objc_setAssociatedObject(controller, kWIBSettingsEntryAssociatedKey, cell, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 %hook MinimizeViewController
@@ -283,6 +342,11 @@ static void WIBEnsureSettingsEntry(id controller) {
 %new
 - (void)wib_onSettingsEntryTapped {
     WIBPresentSettingsFromController(self);
+}
+
+%new
+- (void)wmm_onSettingsEntryTapped {
+    WMMPresentSettingsFromController(self);
 }
 
 %end
