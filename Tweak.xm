@@ -53,25 +53,21 @@ static BOOL WIBBoolCallNoArg(id obj, NSString *selectorName, BOOL fallback) {
 
 static BOOL WIBIsTextMessage(CMessageWrap *msgWrap) {
     if (!msgWrap) return NO;
-    if (WIBBoolCallNoArg(msgWrap, @"IsTextMsg", NO)) {
-        return YES;
+    NSString *content = WIBTrimmed(msgWrap.m_nsContent);
+    if (content.length == 0) {
+        content = WIBTrimmed(msgWrap.m_nsPushContent);
     }
-    unsigned int msgType = WIBUIntForKey(msgWrap, @"m_uiMessageType");
-    if (msgType != 0) {
-        return msgType == 1;
-    }
-    return WIBTrimmed(msgWrap.m_nsContent).length > 0 || WIBTrimmed(msgWrap.m_nsPushContent).length > 0;
+    return content.length > 0;
+}
+
+static BOOL WIBIsLikelyChattingController(id controller) {
+    return NO;
 }
 
 static BOOL WIBIsSelfSent(CMessageWrap *msgWrap) {
     if (!msgWrap) return NO;
     if (WIBBoolCallNoArg(msgWrap, @"IsSendBySendMsg", NO)) {
         return YES;
-    }
-    Class wrapCls = NSClassFromString(@"CMessageWrap");
-    SEL classSel = NSSelectorFromString(@"isSenderFromMsgWrap:");
-    if (wrapCls && [wrapCls respondsToSelector:classSel]) {
-        return ((BOOL (*)(id, SEL, id))objc_msgSend)(wrapCls, classSel, msgWrap);
     }
     return NO;
 }
@@ -185,9 +181,11 @@ static NSString *WIBCurrentChatUserName(void) {
     UIViewController *top = WIBTopViewController();
     UIViewController *cursor = top;
     while (cursor) {
-        NSString *chat = WIBExtractChatUserFromObject(cursor);
-        if (chat.length > 0) {
-            return chat;
+        if (WIBIsLikelyChattingController(cursor)) {
+            NSString *chat = WIBExtractChatUserFromObject(cursor);
+            if (chat.length > 0) {
+                return chat;
+            }
         }
         cursor = cursor.parentViewController;
     }
@@ -300,15 +298,6 @@ static BOOL WIBShouldPresent(CMessageWrap *msgWrap, NSDictionary<NSString *, NSS
     if (!msgWrap || !payload) return NO;
     if (WIBIsSelfSent(msgWrap)) return NO;
 
-    NSString *targetUser = payload[@"targetUser"];
-    NSString *activeChat = WIBCurrentChatUserName();
-    if (targetUser.length > 0 && activeChat.length > 0 && [activeChat isEqualToString:targetUser]) {
-        return NO;
-    }
-
-    if (WIBIsDuplicateMessageKey(payload[@"messageKey"])) {
-        return NO;
-    }
     return YES;
 }
 
