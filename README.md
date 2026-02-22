@@ -1,39 +1,47 @@
-## WeChat Island Banner
+## WeChat Island Banner (Island Only)
 
-**功能**：在微信内收到新消息时，在灵动岛区域显示一条自定义横幅通知（只在微信内弹，不依赖系统通知中心）。
+这个项目现在是**纯灵动岛通知版**，只保留微信内消息上岛能力，不包含任何“消息合并”功能。
+
+### 功能
+
+- 微信前台收到新消息时，在灵动岛区域显示横幅通知
+- 支持头像、昵称、内容展示
+- 支持点击横幅跳转会话
+- 支持设置项（开关、宽高、背景/边框/文字颜色）
+- 仅在微信内展示，不依赖系统通知中心
+
+### 已移除功能
+
+- 消息合并 Hook
+- 消息合并设置页
+- 消息合并配置模型
 
 ### 环境
 
-- iOS 16（已在 Dopamine 环境设计）
+- iOS 16+
 - Theos + Logos
-- 微信 8.0.64（本仓库自带该版本的 `WeChat/*.h` 头文件）
+- 微信 8.0.64（按当前头文件适配）
 
 ### 编译
 
 ```bash
-export THEOS=/opt/theos  # 按你的实际路径
+export THEOS=/opt/theos
 make package
 ```
 
-生成的 deb 在 `./packages/` 目录下。
+构建产物位于 `packages/`。
 
 ### 部署
 
-- 将 deb 传到设备（Filza / ssh / AirDrop 等），使用 Sileo / Zebra / `dpkg -i` 安装。
-- 安装后会自动 `sbreload`，重新打开微信即可。
+- 把 deb 传到设备后使用 Sileo / Zebra / `dpkg -i` 安装
+- 安装完成后重启微信验证
 
-### 主要文件说明
+### 关键文件
 
-- `Tweak.xm`  
-  Hook `CMessageMgr` 的消息到达入口，从 `CMessageWrap` 解析发送者与内容，并调用横幅管理器。
-
-- `WXBannerManager.h/m`  
-  负责在状态栏之上绘制圆角横幅视图，淡入/停留/淡出，可点击关闭。
-
-- `CydiaSubstrate/ellekit.m`  
-  注册从 `CydiaSubstrate/*.h` dump 出来的占位类，避免运行时找不到类导致崩溃。
-
-- `Makefile` / `control` / `WeChatIslandBanner.plist`  
-  标准 Theos tweak 工程配置，支持直接 `make package` 生成 deb。
+- `Tweak.xm`：消息入口 Hook、文本过滤、会话抑制、去重
+- `Sources/WXBannerManager.m`：横幅队列、渲染、动画、点击跳转
+- `Controllers/WeChatIslandBannerSettingsController.m`：设置页 UI
+- `Controllers/WIBConfig.m`：灵动岛配置持久化
+- `Headers/WXWeChatStubs.h`：最小化微信类声明
 
 

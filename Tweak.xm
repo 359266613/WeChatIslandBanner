@@ -132,8 +132,17 @@ static UIViewController *WIBTopViewController(void) {
     }
 
     if (!keyWindow) {
-        keyWindow = app.keyWindow;
+        for (UIScene *scene in app.connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+            UIWindowScene *windowScene = (UIWindowScene *)scene;
+            if (windowScene.windows.count > 0) {
+                keyWindow = windowScene.windows.firstObject;
+                break;
+            }
+        }
     }
+
+    if (!keyWindow) return nil;
 
     UIViewController *vc = keyWindow.rootViewController;
     while (vc.presentedViewController) {
