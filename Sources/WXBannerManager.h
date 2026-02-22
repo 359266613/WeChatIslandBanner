@@ -1,5 +1,4 @@
 #import <UIKit/UIKit.h>
-#import <UIKit/UIKit.h>
 
 @interface WXBannerManager : NSObject
 
@@ -10,4 +9,3 @@
              userName:(NSString *)userName;
 
 @end
-

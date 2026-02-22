@@ -7,6 +7,12 @@
 @property (retain, nonatomic, nullable) NSString *m_nsContent;
 @property (retain, nonatomic, nullable) NSString *m_nsPushContent;
 @property (retain, nonatomic, nullable) NSString *m_nsRealChatUsr; // 群聊时真实发送者
+@property (nonatomic) unsigned int m_uiMessageType;
+@property (nonatomic) unsigned int m_uiMesLocalID;
+@property (nonatomic) unsigned int m_uiCreateTime;
+@property (nonatomic) long long m_n64MesSvrID;
+- (BOOL)IsTextMsg;
+- (BOOL)IsSendBySendMsg;
 @end
 
 @interface CBaseContact : NSObject
